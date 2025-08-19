@@ -1,0 +1,67 @@
+body {
+    margin: 0;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    background: #000;
+    color: #fff;
+}
+
+.container {
+    display: flex;
+    gap: 20px;
+}
+
+canvas {
+    border: 2px solid #333;
+    background: #001122;
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 14px;
+    background: #444;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #666;
+}
+
+.info-panel {
+    width: 300px;
+    background: #111;
+    padding: 15px;
+    border-radius: 8px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.section {
+    margin-bottom: 20px;
+}
+
+.section h3 {
+    color: #4CAF50;
+    margin: 0 0 10px 0;
+    border-bottom: 1px solid #333;
+    padding-bottom: 5px;
+}
+
+.item {
+    margin: 5px 0;
+    font-size: 12px;
+}
+
+.station { color: #FFD700; }
+.trader { color: #00BFFF; }
+.miner { color: #FF6347; }
+.asteroid { color: #888; }

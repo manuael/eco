@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌱 Eco Simulation</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f8f0;
+            color: #2d5a2d;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2d5a2d;
+            margin-bottom: 30px;
+        }
+        
+        #output {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-line;
+            min-height: 100px;
+        }
+        
+        .controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 0 10px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .info {
+            background-color: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+    </style> -->
+</head>
+<body>
+    <body>
+        <h1>Eco System Simulation</h1>
+        
+        <div class="controls">
+            <button onclick="toggleSimulation()">Start/Stop</button>
+            <button onclick="resetSimulation()">Reset</button>
+            <button onclick="addRandomShip()">Add Ship</button>
+            <button onclick="speedUp()">Speed Up</button>
+        </div>
+        
+        <div class="container">
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            <div class="info-panel" id="infoPanel">
+                <div class="section">
+                    <h3>Stations</h3>
+                    <div id="stationInfo"></div>
+                </div>
+                <div class="section">
+                    <h3>Ships</h3>
+                    <div id="shipInfo"></div>
+                </div>
+                <div class="section">
+                    <h3>Trade Activity</h3>
+                    <div id="tradeInfo"></div>
+                </div>
+                <div class="section">
+                    <h3>Resources</h3>
+                    <div id="resourceInfo"></div>
+                </div>
+            </div>
+        </div>
+
+        <script type="module" src="dist/index.js"></script>
+    <!-- <script type="module">
+        // Import your compiled TypeScript
+        import { EcoSimulation } from './dist/index.js';
+        
+        // Capture console.log output
+        const outputDiv = document.getElementById('output');
+        const originalLog = console.log;
+        
+        console.log = function(...args) {
+            // Call original console.log
+            originalLog.apply(console, arguments);
+            
+            // Also display in our output div
+            const message = args.join(' ') + '\n';
+            outputDiv.textContent += message;
+        };
+        
+        // Global functions for buttons
+        window.runSimulation = function() {
+            outputDiv.textContent += '--- New Simulation ---\n';
+            
+            const simulation = new EcoSimulation();
+            
+            simulation.addEcosystem({
+                name: "🌲 Forest",
+                population: 1000,
+                resources: 500
+            });
+            
+            simulation.addEcosystem({
+                name: "🌊 Ocean", 
+                population: 5000,
+                resources: 2000
+            });
+            
+            simulation.addEcosystem({
+                name: "🏔️ Mountain",
+                population: 300,
+                resources: 150
+            });
+            
+            simulation.simulate();
+            outputDiv.textContent += '\n';
+        };
+        
+        window.clearOutput = function() {
+            outputDiv.textContent = '';
+        };
+        
+        // Run initial simulation
+        console.log('🎉 Welcome! Click "Run Simulation" to start...\n');
+    </script> -->
+</body>
+</html> 

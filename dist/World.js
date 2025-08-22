@@ -2,22 +2,30 @@ import { Station } from "./Station.js";
 import { Ship } from "./Ship.js";
 import { AsteroidBelt } from "./Asteroidbelt.js";
 import { Recipe } from "./Recipe.js";
+import { MarketExchange } from "./MarketExchange.js";
 export class World {
     stations;
     ships;
     asteroidBelts;
     recipes;
     orderBook;
-    tradeLog;
     time;
+    market;
     constructor() {
         this.stations = [];
         this.ships = [];
         this.asteroidBelts = [];
         this.recipes = [];
         this.orderBook = { buy: [], sell: [] };
-        this.tradeLog = [];
         this.time = 0;
+        this.market = new MarketExchange();
+    }
+    get tradeLog() {
+        return this.market.getRecentTrades(undefined, 10);
+    }
+    addStation(station) {
+        station.setMarket(this.market);
+        this.stations.push(station);
     }
     update(deltaTime) {
         this.time += deltaTime;
@@ -81,18 +89,8 @@ export class World {
         return nearest;
     }
     addTrade(from, to, ware, quantity, price) {
-        this.tradeLog.push({
-            time: this.time,
-            from: from,
-            to: to,
-            ware: ware,
-            quantity: quantity,
-            price: price
-        });
-        // Keep only last 10 trades
-        if (this.tradeLog.length > 10) {
-            this.tradeLog.shift();
-        }
+        // This method is now handled by the market exchange
+        console.log(`Legacy addTrade called: ${from} -> ${to}, ${quantity} ${ware} @ ${price}`);
     }
 }
 //# sourceMappingURL=World.js.map

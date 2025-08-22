@@ -4,6 +4,9 @@ import { Ship } from "./Ship.js";
 import { AsteroidBelt } from "./Asteroidbelt.js";
 import { Recipe } from "./Recipe.js";
 import type { Stock, ShipType } from "./interfaces.js";
+import { Order } from "./Order.js";
+import { MarketExchange } from "./MarketExchange.js";
+import type { OrderBook, TradeRecord, PriceHistory, MarketStats, TradeExecution, OrderSide } from "./interfaces.js";
 
 // Game State
 let world = new World();
@@ -14,44 +17,61 @@ let lastTime = 0;
 let timeScale = 1;
 
 function initializeGame(): void {
+
+    const oreToIron = new Recipe('ore_to_iron',
+        [],
+        [{ ware: 'iron', qty: 5 }],
+        1, 0);
+    
     const ironToSteel = new Recipe('iron_to_steel',
         [{ ware: 'iron', qty: 2 }],
         [{ ware: 'steel', qty: 1 }],
-        3, 1);
+        1, 0);
 
     const steelToShips = new Recipe('steel_to_ships',
         [{ ware: 'steel', qty: 5 }],
         [{ ware: 'ships', qty: 1 }],
-        5, 2);
+        5, 0);
 
     
     const miningStation = new Station('mine1', 'Iron Mine', [100, 100], 'mine');
-    miningStation.addStock('iron', 50);
+    miningStation.addRecipe(oreToIron);
+    //miningStation.addStock('iron', 50);
 
-    const steelMill = new Station('mill1', 'Steel Mill', [300, 200], 'factory');
+    const steelMill = new Station('mill1', 'Steel Mill 1', [300, 200], 'factory');
     steelMill.addRecipe(ironToSteel);
-    steelMill.addStock('iron', 20);
+    //steelMill.addStock('iron', 20);
+
+    const steelMill1 = new Station('mill2', 'Steel Mill 2', [300, 300], 'factory');
+    steelMill1.addRecipe(ironToSteel);
+
+    const steelMill2 = new Station('mill3', 'Steel Mill 3', [300, 400], 'factory');
+    steelMill2.addRecipe(ironToSteel);
 
     const shipyard = new Station('shipyard1', 'Shipyard', [500, 350], 'factory');
     shipyard.addRecipe(steelToShips);
-    shipyard.addStock('steel', 10);
-
-    const tradingPost = new Station('trade1', 'Trading Post', [200, 400], 'trade');
-    tradingPost.addStock('iron', 30);
-    tradingPost.addStock('steel', 15);
+    //shipyard.addStock('steel', 10);
 
     
     world = new World();
-    world.stations.push(miningStation, steelMill, shipyard, tradingPost);
-    world.ships.push(
-        new Ship('trader1', 'TRADER', [150, 150]),
-        new Ship('miner1', 'MINER', [120, 120]),
-        new Ship('trader2', 'TRADER', [400, 300])
-    );
-    world.asteroidBelts.push(
-        new AsteroidBelt('belt1', 'iron', [600, 100], 500),
-        new AsteroidBelt('belt2', 'copper', [700, 450], 300)
-    );
+    // Use addStation to ensure market integration
+    world.addStation(miningStation);
+    world.addStation(steelMill);
+    world.addStation(steelMill1);
+    world.addStation(steelMill2);
+    world.addStation(shipyard);
+    
+    // world.ships.push(
+    //     new Ship('trader1', 'TRADER', [150, 150]),
+    //     new Ship('miner1', 'MINER', [120, 120]),
+    //     new Ship('trader2', 'TRADER', [400, 300])
+    // );
+
+    // Add asteroid belts for mining
+    // world.asteroidBelts.push(
+    //     new AsteroidBelt('belt1', 'iron', [50, 50], 1000),
+    //     new AsteroidBelt('belt2', 'iron', [700, 100], 800)
+    // );
 }
 
 // Rendering
@@ -173,16 +193,80 @@ function render(): void {
 
 // Update Info Panel
 function updateInfoPanel(): void {
+    // Market Statistics
+    const marketInfo = document.getElementById('marketInfo');
+    if (marketInfo) {
+        const wares = world.market.getAllWares();
+        marketInfo.innerHTML = wares.map(ware => {
+            const stats = world.market.getMarketStats(ware);
+            const { bid, ask } = world.market.getBestBidAsk(ware);
+            
+            if (!stats) return '';
+            
+            return `<div class="item market-ware">
+                <strong>${ware.toUpperCase()}</strong><br>
+                Price: ${stats.currentPrice.toFixed(2)}<br>
+                Bid/Ask: ${bid?.toFixed(2) || 'N/A'} / ${ask?.toFixed(2) || 'N/A'}<br>
+                Supply: ${stats.supplyLevel} | Demand: ${stats.demandLevel}<br>
+                Volume: ${stats.volume}<br>
+                ${stats.spread > 0 ? `Spread: ${stats.spread.toFixed(2)}` : ''}
+            </div>`;
+        }).join('');
+    }
+
+    // Active Orders
+    const orderInfo = document.getElementById('orderInfo');
+    if (orderInfo) {
+        const allOrders: Array<{ware: string, side: string, price: number, qty: number, station: string}> = [];
+        
+        world.market.getAllWares().forEach(ware => {
+            const orderBook = world.market.getOrderBook(ware);
+            if (orderBook) {
+                orderBook.buy.slice(0, 3).forEach(order => {
+                    allOrders.push({
+                        ware,
+                        side: 'BUY',
+                        price: order.price,
+                        qty: order.qty,
+                        station: order.stationId
+                    });
+                });
+                orderBook.sell.slice(0, 3).forEach(order => {
+                    allOrders.push({
+                        ware,
+                        side: 'SELL',
+                        price: order.price,
+                        qty: order.qty,
+                        station: order.stationId
+                    });
+                });
+            }
+        });
+
+        if (allOrders.length > 0) {
+            orderInfo.innerHTML = allOrders.map(order => 
+                `<div class="item order-${order.side.toLowerCase()}">
+                    <strong>${order.side}</strong> ${order.ware}<br>
+                    ${order.qty} @ ${order.price.toFixed(2)}<br>
+                    <small>${order.station}</small>
+                </div>`
+            ).join('');
+        } else {
+            orderInfo.innerHTML = '<div class="item">No active orders</div>';
+        }
+    }
+
     // Stations
     const stationInfo = document.getElementById('stationInfo');
     if (stationInfo) {
         stationInfo.innerHTML = world.stations.map(station =>
             `<div class="item station">
-                    <strong>${station.name}</strong><br>
-                    Credits: ${station.credits}<br>
-                    Stock: ${Object.entries(station.stock).map(([ware, qty]) => `${ware}: ${qty}`).join(', ') || 'Empty'}<br>
-                    ${station.productionTimer > 0 ? `Producing... (${station.productionTimer.toFixed(1)}s)` : 'Idle'}
-                </div>`
+                <strong>${station.name}</strong><br>
+                Credits: ${station.credits.toFixed(0)}<br>
+                Stock: ${Object.entries(station.stock).map(([ware, qty]) => `${ware}: ${qty}`).join(', ') || 'Empty'}<br>
+                Orders: ${station.orders.length}<br>
+                ${station.productionTimer > 0 ? `Producing... (${station.productionTimer.toFixed(1)}s)` : 'Idle'}
+            </div>`
         ).join('');
     }
 
@@ -191,11 +275,11 @@ function updateInfoPanel(): void {
     if (shipInfo) {
         shipInfo.innerHTML = world.ships.map(ship =>
             `<div class="item ${ship.type.toLowerCase()}">
-                    <strong>${ship.id}</strong> (${ship.type})<br>
-                    Status: ${ship.state}<br>
-                    Cargo: ${ship.getCurrentCargo()}/${ship.cargoCap}<br>
-                    ${Object.entries(ship.cargo).map(([ware, qty]) => `${ware}: ${qty}`).join(', ') || 'Empty'}
-                </div>`
+                <strong>${ship.id}</strong> (${ship.type})<br>
+                Status: ${ship.state}<br>
+                Cargo: ${ship.getCurrentCargo()}/${ship.cargoCap}<br>
+                ${Object.entries(ship.cargo).map(([ware, qty]) => `${ware}: ${qty}`).join(', ') || 'Empty'}
+            </div>`
         ).join('');
     }
 
@@ -204,9 +288,9 @@ function updateInfoPanel(): void {
     if (tradeInfo) {
         tradeInfo.innerHTML = world.tradeLog.slice(-5).reverse().map(trade =>
             `<div class="item">
-                    ${trade.from} → ${trade.to}<br>
-                    ${trade.ware}: ${trade.quantity} @ ${trade.price}
-                </div>`
+                ${trade.from} → ${trade.to}<br>
+                ${trade.ware}: ${trade.quantity} @ ${trade.price.toFixed(2)}
+            </div>`
         ).join('') || '<div class="item">No recent trades</div>';
     }
 
@@ -233,6 +317,8 @@ function gameLoop(currentTime: number): void {
 
         if (deltaTime < 0.1) { // Prevent huge jumps
             world.update(deltaTime);
+            // Add this line to handle market cleanup
+            world.market.update();
             updateInfoPanel();
         }
 

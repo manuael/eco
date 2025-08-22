@@ -1,6 +1,7 @@
 import { Order } from "./Order.js";
 import { Recipe } from "./Recipe.js";
-import type { Stock } from "./interfaces.js";
+import { MarketExchange } from "./MarketExchange.js";
+import type { Stock, StationMarketConfig, TradeExecution } from "./interfaces.js";
 type StationType = 'factory' | 'mine' | 'trade';
 export declare class Station {
     id: string;
@@ -14,10 +15,26 @@ export declare class Station {
     storageCapacity: number;
     productionTimer: number;
     orders: Order[];
+    marketConfig: StationMarketConfig;
+    private market;
+    lastMarketUpdate: number;
+    marketUpdateInterval: number;
+    private priceMemory;
     constructor(id: string, name: string, location: [number, number], type?: StationType);
+    setMarket(market: MarketExchange): void;
+    private initializePriceMemory;
     addRecipe(recipe: Recipe): void;
     update(deltaTime: number): void;
+    private handleProduction;
+    private updateMarketOrders;
+    private calculateAdaptiveBuyPrice;
+    private calculateAdaptiveSellPrice;
+    private getProductionCost;
+    onOrderExpired(order: Order): void;
+    onSuccessfulTrade(execution: TradeExecution, side: 'BUY' | 'SELL'): void;
     addStock(ware: string, quantity: number): void;
+    getStockLevel(ware: string): number;
+    getStockPercentage(ware: string): number;
 }
 export {};
 //# sourceMappingURL=Station.d.ts.map

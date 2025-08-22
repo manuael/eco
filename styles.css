@@ -65,3 +65,64 @@ button:hover {
 .trader { color: #00BFFF; }
 .miner { color: #FF6347; }
 .asteroid { color: #888; }
+
+.market-ware {
+    border-left: 3px solid #4CAF50;
+}
+
+.order-buy {
+    border-left: 3px solid #2196F3;
+    background-color: #f0f8ff;
+}
+
+.order-sell {
+    border-left: 3px solid #f44336;
+    background-color: #fff0f0;
+}
+
+.item {
+    margin-bottom: 10px;
+    padding: 8px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.section {
+    margin-bottom: 20px;
+}
+
+.section h3 {
+    margin: 0 0 10px 0;
+    color: #333;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-panel {
+    max-height: 600px;
+    overflow-y: auto;
+    padding: 10px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+/* Responsive layout */
+.container {
+    display: flex;
+    gap: 20px;
+}
+
+#gameCanvas {
+    flex: 1;
+    border: 1px solid #ccc;
+}
+
+.info-panel {
+    width: 300px;
+    flex-shrink: 0;
+}

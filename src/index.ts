@@ -1,349 +1,9 @@
-
-// Type definitions
-interface ResourceItem {
-    ware: string;
-    qty: number;
-}
-
-interface Stock {
-    [ware: string]: number;
-}
-
-interface NextAction {
-    state: ShipState;
-    timer: number;
-}
-
-interface TradeRecord {
-    time: number;
-    from: string;
-    to: string;
-    ware: string;
-    quantity: number;
-    price: number;
-}
-
-interface OrderBook {
-    buy: Order[];
-    sell: Order[];
-}
-
-type StationType = 'factory' | 'mine' | 'trade';
-type ShipType = 'TRADER' | 'MINER';
-type ShipState = 'idle' | 'moving' | 'trading' | 'mining';
-type OrderSide = 'BUY' | 'SELL';
-
-// Game Classes
-class Recipe {
-    public id: string;
-    public inputs: ResourceItem[];
-    public outputs: ResourceItem[];
-    public duration: number;
-    public energyReq: number;
-
-    constructor(id: string, inputs: ResourceItem[], outputs: ResourceItem[], duration: number, energyReq: number) {
-        this.id = id;
-        this.inputs = inputs;
-        this.outputs = outputs;
-        this.duration = duration;
-        this.energyReq = energyReq;
-    }
-
-    canProduce(stock: Stock): boolean {
-        return this.inputs.every(input => {
-            const stockAmount = stock[input.ware];
-            return stockAmount && stockAmount >= input.qty;
-        });
-    }
-}
-
-class Order {
-    public id: string;
-    public stationId: string;
-    public ware: string;
-    public side: OrderSide;
-    public qty: number;
-    public price: number;
-
-    constructor(id: string, stationId: string, ware: string, side: OrderSide, qty: number, price: number) {
-        this.id = id;
-        this.stationId = stationId;
-        this.ware = ware;
-        this.side = side;
-        this.qty = qty;
-        this.price = price;
-    }
-}
-
-class Station {
-    public id: string;
-    public name: string;
-    public location: [number, number];
-    public type: StationType;
-    public stock: Stock;
-    public credits: number;
-    public recipes: Recipe[];
-    public productionQueue: Recipe[];
-    public storageCapacity: number;
-    public productionTimer: number;
-    public orders: Order[];
-
-    constructor(id: string, name: string, location: [number, number], type: StationType = 'factory') {
-        this.id = id;
-        this.name = name;
-        this.location = location;
-        this.type = type;
-        this.stock = {};
-        this.credits = 1000;
-        this.recipes = [];
-        this.productionQueue = [];
-        this.storageCapacity = 1000;
-        this.productionTimer = 0;
-        this.orders = [];
-    }
-
-    addRecipe(recipe: Recipe): void {
-        this.recipes.push(recipe);
-    }
-
-    update(deltaTime: number): void {
-        // Production logic
-        if (this.recipes.length > 0 && this.productionTimer <= 0) {
-            const recipe = this.recipes[0]; // Simple: use first recipe
-            if (recipe && recipe.canProduce(this.stock)) {
-                // Consume inputs
-                recipe.inputs.forEach(input => {
-                    this.stock[input.ware] = (this.stock[input.ware] || 0) - input.qty;
-                });
-                // Start production
-                this.productionTimer = recipe.duration;
-                this.productionQueue.push(recipe);
-            }
-        }
-
-        // Complete production
-        if (this.productionTimer > 0) {
-            this.productionTimer -= deltaTime;
-            if (this.productionTimer <= 0) {
-                const completedRecipe = this.productionQueue.shift();
-                if (completedRecipe) {
-                    completedRecipe.outputs.forEach(output => {
-                        this.stock[output.ware] = (this.stock[output.ware] || 0) + output.qty;
-                    });
-                }
-            }
-        }
-    }
-
-    addStock(ware: string, quantity: number): void {
-        this.stock[ware] = (this.stock[ware] || 0) + quantity;
-    }
-}
-
-class Ship {
-    public id: string;
-    public type: ShipType;
-    public location: [number, number];
-    public target: [number, number] | null;
-    public cargoCap: number;
-    public cargo: Stock;
-    public speed: number;
-    public state: ShipState;
-    public actionTimer: number;
-    public nextAction: NextAction | null;
-
-    constructor(id: string, type: ShipType, location: [number, number], cargoCap: number = 100) {
-        this.id = id;
-        this.type = type;
-        this.location = [...location] as [number, number];
-        this.target = null;
-        this.cargoCap = cargoCap;
-        this.cargo = {};
-        this.speed = 50; // pixels per second
-        this.state = 'idle';
-        this.actionTimer = 0;
-        this.nextAction = null;
-    }
-
-    update(deltaTime: number): void {
-        if (this.target && this.state === 'moving') {
-            const dx = this.target[0] - this.location[0];
-            const dy = this.target[1] - this.location[1];
-            const distance = Math.sqrt(dx * dx + dy * dy);
-
-            if (distance < 5) {
-                this.location = [...this.target] as [number, number];
-                this.target = null;
-
-                // Execute the next action when reaching destination
-                if (this.nextAction) {
-                    this.state = this.nextAction.state;
-                    this.actionTimer = this.nextAction.timer;
-                    this.nextAction = null;
-                } else {
-                    this.state = 'idle';
-                }
-            } else {
-                const moveDistance = this.speed * deltaTime;
-                this.location[0] += (dx / distance) * moveDistance;
-                this.location[1] += (dy / distance) * moveDistance;
-            }
-        }
-
-        // Action timer
-        if (this.actionTimer > 0) {
-            this.actionTimer -= deltaTime;
-            if (this.actionTimer <= 0) {
-                this.completeAction();
-            }
-        }
-    }
-
-    moveTo(target: [number, number], nextAction: NextAction | null = null): void {
-        this.target = [...target] as [number, number];
-        this.state = 'moving';
-        this.nextAction = nextAction;
-    }
-
-    completeAction(): void {
-        if (this.type === 'MINER' && this.state === 'mining') {
-            this.cargo['ore'] = (this.cargo['ore'] || 0) + 10;
-            this.state = 'idle';
-        } else if (this.type === 'TRADER' && this.state === 'trading') {
-            // Complete trade
-            this.state = 'idle';
-        }
-    }
-
-    getCurrentCargo(): number {
-        return Object.values(this.cargo).reduce((sum: number, qty: number) => sum + qty, 0);
-    }
-}
-
-class AsteroidBelt {
-    public id: string;
-    public type: string;
-    public location: [number, number];
-    public quantity: number;
-    public maxQuantity: number;
-
-    constructor(id: string, type: string, location: [number, number], quantity: number = 1000) {
-        this.id = id;
-        this.type = type;
-        this.location = location;
-        this.quantity = quantity;
-        this.maxQuantity = quantity;
-    }
-
-    mineOre(amount: number): number {
-        const mined = Math.min(amount, this.quantity);
-        this.quantity -= mined;
-        return mined;
-    }
-}
-
-class World {
-    public stations: Station[];
-    public ships: Ship[];
-    public asteroidBelts: AsteroidBelt[];
-    public recipes: Recipe[];
-    public orderBook: OrderBook;
-    public tradeLog: TradeRecord[];
-    public time: number;
-
-    constructor() {
-        this.stations = [];
-        this.ships = [];
-        this.asteroidBelts = [];
-        this.recipes = [];
-        this.orderBook = { buy: [], sell: [] };
-        this.tradeLog = [];
-        this.time = 0;
-    }
-
-    update(deltaTime: number): void {
-        this.time += deltaTime;
-
-        this.stations.forEach(station => station.update(deltaTime));
-        this.ships.forEach(ship => ship.update(deltaTime));
-
-        // Simple AI for ships
-        this.ships.forEach(ship => {
-            if (ship.state === 'idle') {
-                this.assignShipTask(ship);
-            }
-        });
-    }
-
-    assignShipTask(ship: Ship): void {
-        if (ship.type === 'MINER') {
-            // Find nearest asteroid belt
-            const belt = this.asteroidBelts.find(b => b.quantity > 0);
-            if (belt && ship.getCurrentCargo() < ship.cargoCap * 0.8) {
-                // Move to belt and then start mining
-                ship.moveTo(belt.location, {
-                    state: 'mining',
-                    timer: 2 + Math.random() * 3
-                });
-            } else {
-                // Return to nearest station
-                const station = this.findNearestStation(ship.location);
-                if (station) {
-                    ship.moveTo(station.location, {
-                        state: 'trading',
-                        timer: 1
-                    });
-                }
-            }
-        } else if (ship.type === 'TRADER') {
-            // Find trade opportunities
-            const stations = this.stations.filter(s => s.type === 'factory');
-            if (stations.length >= 2) {
-                const randomStation = stations[Math.floor(Math.random() * stations.length)];
-                if (randomStation) {
-                    ship.moveTo(randomStation.location, {
-                        state: 'trading',
-                        timer: 1 + Math.random() * 2
-                    });
-                }
-            }
-        }
-    }
-
-    findNearestStation(location: [number, number]): Station | null {
-        let nearest: Station | null = null;
-        let minDistance = Infinity;
-
-        this.stations.forEach(station => {
-            const dx = station.location[0] - location[0];
-            const dy = station.location[1] - location[1];
-            const distance = Math.sqrt(dx * dx + dy * dy);
-
-            if (distance < minDistance) {
-                minDistance = distance;
-                nearest = station;
-            }
-        });
-
-        return nearest;
-    }
-
-    addTrade(from: string, to: string, ware: string, quantity: number, price: number): void {
-        this.tradeLog.push({
-            time: this.time,
-            from: from,
-            to: to,
-            ware: ware,
-            quantity: quantity,
-            price: price
-        });
-
-        // Keep only last 10 trades
-        if (this.tradeLog.length > 10) {
-            this.tradeLog.shift();
-        }
-    }
-}
+import { World } from "./World.js";
+import { Station } from "./Station.js";
+import { Ship } from "./Ship.js";
+import { AsteroidBelt } from "./Asteroidbelt.js";
+import { Recipe } from "./Recipe.js";
+import type { Stock, ShipType } from "./interfaces.js";
 
 // Game State
 let world = new World();
@@ -353,11 +13,7 @@ let isRunning = false;
 let lastTime = 0;
 let timeScale = 1;
 
-// Initialize Game
 function initializeGame(): void {
-    world = new World();
-
-    // Create recipes
     const ironToSteel = new Recipe('iron_to_steel',
         [{ ware: 'iron', qty: 2 }],
         [{ ware: 'steel', qty: 1 }],
@@ -368,7 +24,7 @@ function initializeGame(): void {
         [{ ware: 'ships', qty: 1 }],
         5, 2);
 
-    // Create stations
+    
     const miningStation = new Station('mine1', 'Iron Mine', [100, 100], 'mine');
     miningStation.addStock('iron', 50);
 
@@ -384,16 +40,14 @@ function initializeGame(): void {
     tradingPost.addStock('iron', 30);
     tradingPost.addStock('steel', 15);
 
+    
+    world = new World();
     world.stations.push(miningStation, steelMill, shipyard, tradingPost);
-
-    // Create ships
     world.ships.push(
         new Ship('trader1', 'TRADER', [150, 150]),
         new Ship('miner1', 'MINER', [120, 120]),
         new Ship('trader2', 'TRADER', [400, 300])
     );
-
-    // Create asteroid belts
     world.asteroidBelts.push(
         new AsteroidBelt('belt1', 'iron', [600, 100], 500),
         new AsteroidBelt('belt2', 'copper', [700, 450], 300)
